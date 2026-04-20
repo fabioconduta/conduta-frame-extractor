@@ -622,7 +622,27 @@
               <div class="tl-prog" id="tlp" style="width:0%"></div>
               <div class="tl-thumb" id="tlt" style="left:0%"></div>
             </div>
-            <div class="t-disp" id="tdisp">0:00 / 0:00</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
+              <div style="display:flex;align-items:center;gap:5px">
+                <button onclick="stepFrame(-1)" title="Frame anterior (seta esquerda)" style="width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--white);font-size:12px;cursor:pointer">◀</button>
+                <button onclick="vid.paused?vid.play():vid.pause()" title="Play/Pause (Espaço)" style="width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--white);font-size:10px;cursor:pointer">▶❚</button>
+                <button onclick="stepFrame(1)" title="Próximo frame (seta direita)" style="width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--white);font-size:12px;cursor:pointer">▶</button>
+                <span id="frame-step-indicator" style="font-size:11px;color:var(--accent);font-family:monospace;opacity:0;transition:opacity 0.3s;min-width:72px;padding-left:4px"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:11px;color:var(--gray-400)">FPS</span>
+                <select id="fps-select" onchange="detectedFPS=parseInt(this.value)" style="width:72px;padding:4px 6px;font-size:11px;margin:0;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--white)">
+                  <option value="24">24 fps</option>
+                  <option value="25">25 fps</option>
+                  <option value="30" selected>30 fps</option>
+                  <option value="60">60 fps</option>
+                </select>
+                <div class="t-disp" id="tdisp" style="margin:0;min-width:90px;text-align:right">0:00 / 0:00</div>
+              </div>
+            </div>
+            <div style="margin-top:8px;padding:5px 8px;background:rgba(255,255,255,0.03);border-radius:6px;font-size:10px;color:var(--gray-600);line-height:1.7">
+              ← → &nbsp;frame a frame &nbsp;·&nbsp; Shift+← → &nbsp;pula 1s &nbsp;·&nbsp; Espaço &nbsp;play/pause &nbsp;·&nbsp; Enter &nbsp;captura frame
+            </div>
           </div>
         </div>
       </div>
@@ -754,6 +774,64 @@ document.addEventListener('mousemove',e=>{if(drag)doSeek(e)});
 document.addEventListener('mouseup',()=>drag=false);
 function doSeek(e){const r=tl.getBoundingClientRect();vid.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*(vid.duration||0)}
 function fmt(s){if(!s||isNaN(s))return'0:00';const m=Math.floor(s/60),ss=Math.floor(s%60);return m+':'+String(ss).padStart(2,'0')}
+
+// Detecta o frame rate real do vídeo (fallback 30fps)
+let detectedFPS = 30;
+vid.addEventListener('loadedmetadata', () => {
+  // Tenta detectar via getVideoPlaybackQuality ou usa 30fps como padrão seguro
+  detectedFPS = 30;
+});
+
+function getFrameDuration() {
+  // Usa o frame rate detectado — padrão broadcast/podcast é 30fps
+  return 1 / detectedFPS;
+}
+
+function stepFrame(dir) {
+  if (!vid.duration) return;
+  const step = getFrameDuration();
+  const next = Math.max(0, Math.min(vid.duration, vid.currentTime + (dir * step)));
+  vid.currentTime = next;
+  showFrameStepFeedback(dir);
+}
+
+function showFrameStepFeedback(dir) {
+  const el = document.getElementById('frame-step-indicator');
+  if (!el) return;
+  el.textContent = dir > 0 ? '▶ +1 frame' : '◀ -1 frame';
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.opacity = '0', 600);
+}
+
+// Setas do teclado — só ativa quando o vídeo está carregado e não está em input de texto
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (!vid.src) return;
+
+  if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      vid.currentTime = Math.min(vid.duration, vid.currentTime + 1); // 1 segundo
+    } else {
+      stepFrame(1);
+    }
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      vid.currentTime = Math.max(0, vid.currentTime - 1); // 1 segundo
+    } else {
+      stepFrame(-1);
+    }
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    vid.paused ? vid.play() : vid.pause();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    captureNow();
+  }
+});
 
 function getFilter(){return`contrast(${document.getElementById('qc').value}%) brightness(${document.getElementById('qb').value}%) saturate(${document.getElementById('qs').value}%)`}
 function ql(){

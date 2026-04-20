@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frame Extractor — Conduta Filmes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --black: #0a0a0a;
+    --white: #ffffff;
+    --gray-50: #f7f7f5;
+    --gray-100: #efefec;
+    --gray-200: #e0e0db;
+    --gray-400: #a0a09a;
+    --gray-600: #606058;
+    --gray-800: #2a2a25;
+    --accent: #c8f53a;
+    --accent-dark: #a8d020;
+    --red: #e84040;
+    --blue: #3a8ff5;
+    --green: #22c07a;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--black);
+    color: var(--white);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-mark {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-mark svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+
+  .logo-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+    letter-spacing: -0.01em;
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--gray-400);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-400);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* MAIN */
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* DROP ZONE */
+  #drop-zone {
+    border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: var(--radius-xl);
+    padding: 4rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255,255,255,0.02);
+    transition: all 0.2s;
+    margin-bottom: 24px;
+  }
+
+  #drop-zone:hover, #drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(200,245,58,0.04);
+  }
+
+  #drop-zone input { display: none; }
+
+  .drop-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(200,245,58,0.1);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+  }
+
+  .drop-icon svg { width: 24px; height: 24px; }
+
+  #drop-zone h2 {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  #drop-zone p {
+    font-size: 13px;
+    color: var(--gray-400);
+  }
+
+  /* LAYOUT */
+  #main-panel { display: none; flex-direction: column; gap: 20px; }
+
+  #video-section {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* VIDEO */
+  .video-wrap {
+    background: #000;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  video { width: 100%; display: block; max-height: 420px; object-fit: contain; background: #000; }
+
+  .video-controls {
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .tl-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    margin-bottom: 8px;
+  }
+
+  .tl-prog {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  .tl-thumb {
+    position: absolute;
+    top: -6px;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    cursor: grab;
+    transition: transform 0.1s;
+  }
+
+  .tl-thumb:hover { transform: translateX(-50%) scale(1.2); }
+
+  .t-disp {
+    font-size: 12px;
+    color: var(--gray-400);
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* SIDEBAR */
+  .sidebar { display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+  }
+
+  .card-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+
+  /* CONTROLS */
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .ctrl-row label {
+    font-size: 12px;
+    color: var(--gray-400);
+    min-width: 72px;
+  }
+
+  .ctrl-row input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .ctrl-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .ctrl-row span {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    min-width: 38px;
+    text-align: right;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* BUTTONS */
+  .btn-p {
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    background: var(--accent);
+    color: var(--black);
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: background 0.15s, transform 0.1s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-p:hover { background: var(--accent-dark); }
+  .btn-p:active { transform: scale(0.98); }
+
+  .btn-s {
+    width: 100%;
+    padding: 9px 16px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--white);
+    border: 1px solid rgba(255,255,255,0.12);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-s:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); }
+
+  .btn-danger {
+    width: 100%;
+    padding: 9px 16px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(232,64,64,0.2);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-danger:hover { background: rgba(232,64,64,0.08); }
+
+  select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: var(--white);
+    font-size: 12px;
+    margin-top: 4px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+  }
+
+  select option { background: var(--gray-800); }
+
+  .fl {
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+
+  /* TOOLBAR */
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 16px;
+  }
+
+  .tb-label {
+    font-size: 11px;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 4px;
+  }
+
+  .tb-btn {
+    padding: 5px 14px;
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    color: var(--gray-400);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .tb-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--white); }
+
+  .tb-btn.active {
+    background: var(--accent);
+    color: var(--black);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .tb-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--gray-400);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* FRAMES GRID */
+  #frames-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .frame-item {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    cursor: grab;
+    transition: border-color 0.15s, transform 0.15s;
+    background: var(--gray-800);
+  }
+
+  .frame-item:hover { border-color: rgba(200,245,58,0.4); transform: translateY(-2px); }
+  .frame-item.dragging { opacity: 0.4; transform: scale(0.97); }
+  .frame-item.drag-over { border: 1.5px dashed var(--accent); }
+
+  .frame-item img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+
+  .frame-bottom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  .frame-name {
+    font-size: 11px;
+    color: var(--gray-400);
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    cursor: text;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .frame-name:focus { color: var(--white); }
+
+  .star-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  .star-btn:hover, .star-btn.active { opacity: 1; transform: scale(1.2); }
+
+  .frame-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: none;
+    gap: 4px;
+  }
+
+  .frame-item:hover .frame-actions { display: flex; }
+
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    background: rgba(10,10,10,0.85);
+    border: 1px solid rgba(255,255,255,0.15);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    transition: background 0.15s;
+    backdrop-filter: blur(4px);
+  }
+
+  .icon-btn:hover { background: rgba(200,245,58,0.2); border-color: var(--accent); }
+
+  /* BADGES */
+  .badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 600;
+    pointer-events: none;
+    backdrop-filter: blur(4px);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .badge-scene { background: rgba(58,143,245,0.85); color: #fff; }
+  .badge-best { background: rgba(34,192,122,0.85); color: #fff; }
+
+  /* PROGRESS & STATUS */
+  #progress-wrap { display: none; padding: 8px 0; }
+
+  #progress-bar-bg {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s;
+  }
+
+  #status-bar {
+    display: none;
+    font-size: 12px;
+    color: var(--gray-400);
+    text-align: center;
+    padding: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-600);
+    font-size: 14px;
+  }
+
+  .empty-state span {
+    display: block;
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+  }
+
+  .hint-box {
+    background: rgba(200,245,58,0.06);
+    border: 1px solid rgba(200,245,58,0.15);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: 11px;
+    color: rgba(200,245,58,0.7);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .stat-val { color: var(--accent); font-weight: 500; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 11px;
+    color: var(--gray-600);
+    border-top: 1px solid rgba(255,255,255,0.04);
+    margin-top: 40px;
+  }
+
+  footer strong { color: var(--gray-400); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M3 3L13 8L3 13V3Z" fill="#0a0a0a"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <span class="logo-name">Conduta Filmes</span>
+      <span class="logo-sub">Frame Extractor</span>
+    </div>
+  </div>
+  <span class="header-badge">v2.0</span>
+</header>
+
+<main>
+  <div id="drop-zone" onclick="document.getElementById('fi').click()">
+    <input type="file" id="fi" accept="video/*">
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#c8f53a" stroke-width="1.5">
+        <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+      </svg>
+    </div>
+    <h2>Arraste o vídeo aqui</h2>
+    <p>ou clique para selecionar &nbsp;·&nbsp; MP4, MOV, AVI, MKV</p>
+  </div>
+
+  <div id="main-panel">
+    <div id="video-section">
+      <div>
+        <div class="video-wrap">
+          <video id="vid" controls></video>
+          <div class="video-controls">
+            <div class="tl-bar" id="tl">
+              <div class="tl-prog" id="tlp" style="width:0%"></div>
+              <div class="tl-thumb" id="tlt" style="left:0%"></div>
+            </div>
+            <div class="t-disp" id="tdisp">0:00 / 0:00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+
+        <div class="card">
+          <div class="card-title">Captura manual</div>
+          <button class="btn-p" onclick="captureNow()">▶ Capturar frame atual</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Detecção inteligente</div>
+          <div class="ctrl-row">
+            <label>Intervalo</label>
+            <input type="range" id="intv" min="1" max="30" value="3" oninput="document.getElementById('intv-v').textContent=this.value+'s'">
+            <span id="intv-v">3s</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Similaridade</label>
+            <input type="range" id="sim" min="1" max="20" value="8" oninput="document.getElementById('sim-v').textContent=this.value+'%'">
+            <span id="sim-v">8%</span>
+          </div>
+          <button class="btn-p" onclick="smartExtract()">Extrair frames inteligente</button>
+          <button class="btn-s" onclick="detectScenes()">Detectar cortes de cena</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Qualidade de imagem</div>
+          <div class="ctrl-row">
+            <label>Contraste</label>
+            <input type="range" id="qc" min="80" max="160" value="105" oninput="ql()">
+            <span id="qc-v">105%</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Brilho</label>
+            <input type="range" id="qb" min="80" max="160" value="100" oninput="ql()">
+            <span id="qb-v">100%</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Saturação</label>
+            <input type="range" id="qs" min="80" max="200" value="115" oninput="ql()">
+            <span id="qs-v">115%</span>
+          </div>
+          <div class="fl">Resolução de saída</div>
+          <select id="qsc">
+            <option value="1">Original</option>
+            <option value="1.5">1.5x upscale</option>
+            <option value="2" selected>2x upscale</option>
+            <option value="3">3x upscale</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Exportar</div>
+          <div class="hint-box">↓ individual: clique no frame → abre nova aba → botão direito → Salvar imagem</div>
+          <button class="btn-p" onclick="downloadFavs()">⭐ Baixar favoritos (ZIP)</button>
+          <button class="btn-s" onclick="downloadAll()">Baixar todos (ZIP)</button>
+          <button class="btn-danger" onclick="clearAll()">Limpar tudo</button>
+          <div class="stat-row">
+            <span>Total de frames</span>
+            <span class="stat-val" id="fcount">0</span>
+          </div>
+          <div class="stat-row">
+            <span>Favoritos</span>
+            <span class="stat-val" id="favcount">0</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="progress-wrap"><div id="progress-bar-bg"><div id="progress-bar"></div></div></div>
+    <div id="status-bar"></div>
+
+    <div id="toolbar">
+      <span class="tb-label">Ver</span>
+      <button class="tb-btn active" id="f-all" onclick="setFilter('all')">Todos</button>
+      <button class="tb-btn" id="f-fav" onclick="setFilter('fav')">⭐ Favoritos</button>
+      <button class="tb-btn" id="f-scene" onclick="setFilter('scene')">Cortes de cena</button>
+      <button class="tb-btn" id="f-best" onclick="setFilter('best')">Melhores frames</button>
+      <span class="tb-count" id="filter-count">0 frames</span>
+    </div>
+
+    <div id="frames-grid">
+      <div class="empty-state"><span>◻</span>Nenhum frame capturado ainda.<br>Carregue um vídeo para começar.</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Ferramenta interna &nbsp;·&nbsp; <strong>Conduta Filmes</strong> &nbsp;·&nbsp; Conduta Group
+</footer>
+
+<canvas id="wc" style="display:none"></canvas>
+<canvas id="ac" style="display:none"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const vid=document.getElementById('vid');
+const wc=document.getElementById('wc'),wctx=wc.getContext('2d');
+const ac=document.getElementById('ac'),actx=ac.getContext('2d');
+const grid=document.getElementById('frames-grid');
+let frames=[],currentFilter='all',dragSrc=null;
+
+document.getElementById('fi').addEventListener('change',e=>{if(e.target.files[0])loadVideo(e.target.files[0])});
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])loadVideo(e.dataTransfer.files[0])});
+
+function loadVideo(f){
+  vid.src=URL.createObjectURL(f);
+  dz.style.display='none';
+  document.getElementById('main-panel').style.display='flex';
+}
+
+vid.addEventListener('timeupdate',()=>{
+  const p=vid.duration?(vid.currentTime/vid.duration*100).toFixed(1):0;
+  document.getElementById('tlp').style.width=p+'%';
+  document.getElementById('tlt').style.left=p+'%';
+  document.getElementById('tdisp').textContent=fmt(vid.currentTime)+' / '+fmt(vid.duration||0);
+});
+
+let drag=false;
+const tl=document.getElementById('tl');
+tl.addEventListener('mousedown',e=>{drag=true;doSeek(e)});
+document.addEventListener('mousemove',e=>{if(drag)doSeek(e)});
+document.addEventListener('mouseup',()=>drag=false);
+function doSeek(e){const r=tl.getBoundingClientRect();vid.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*(vid.duration||0)}
+function fmt(s){if(!s||isNaN(s))return'0:00';const m=Math.floor(s/60),ss=Math.floor(s%60);return m+':'+String(ss).padStart(2,'0')}
+
+function getFilter(){return`contrast(${document.getElementById('qc').value}%) brightness(${document.getElementById('qb').value}%) saturate(${document.getElementById('qs').value}%)`}
+function ql(){
+  document.getElementById('qc-v').textContent=document.getElementById('qc').value+'%';
+  document.getElementById('qb-v').textContent=document.getElementById('qb').value+'%';
+  document.getElementById('qs-v').textContent=document.getElementById('qs').value+'%';
+  document.querySelectorAll('.frame-item img').forEach(img=>img.style.filter=getFilter());
+}
+
+function seekTo(t){
+  return new Promise(res=>{
+    if(Math.abs(vid.currentTime-t)<0.04){res();return}
+    vid.currentTime=t;
+    const h=()=>{vid.removeEventListener('seeked',h);res()};
+    vid.addEventListener('seeked',h);
+  });
+}
+
+async function renderFrame(){
+  const scale=parseFloat(document.getElementById('qsc').value);
+  wc.width=Math.round(vid.videoWidth*scale);
+  wc.height=Math.round(vid.videoHeight*scale);
+  wctx.drawImage(vid,0,0,wc.width,wc.height);
+  return wc.toDataURL('image/jpeg',0.95);
+}
+
+function getFrameHash(sz=16){
+  ac.width=sz;ac.height=sz;actx.drawImage(vid,0,0,sz,sz);
+  const d=actx.getImageData(0,0,sz,sz).data,h=[];
+  for(let i=0;i<d.length;i+=4)h.push(Math.round((d[i]+d[i+1]+d[i+2])/3));
+  return h;
+}
+function hashDiff(h1,h2){let d=0;for(let i=0;i<h1.length;i++)d+=Math.abs(h1[i]-h2[i]);return d/(h1.length*255)*100}
+function frameSharpness(){
+  ac.width=64;ac.height=64;actx.drawImage(vid,0,0,64,64);
+  const d=actx.getImageData(0,0,64,64).data;let lap=0;
+  for(let y=1;y<63;y++)for(let x=1;x<63;x++){
+    const i=(y*64+x)*4,g=(d[i]+d[i+1]+d[i+2])/3;
+    const t=((y-1)*64+x)*4,b=((y+1)*64+x)*4,l=(y*64+x-1)*4,r=(y*64+x+1)*4;
+    const gt=(d[t]+d[t+1]+d[t+2])/3,gb=(d[b]+d[b+1]+d[b+2])/3,gl=(d[l]+d[l+1]+d[l+2])/3,gr=(d[r]+d[r+1]+d[r+2])/3;
+    lap+=Math.abs(4*g-gt-gb-gl-gr);
+  }
+  return lap/(62*62);
+}
+
+async function captureNow(){
+  await seekTo(vid.currentTime);
+  const dataUrl=await renderFrame();
+  addFrame(dataUrl,vid.currentTime,{});
+}
+
+async function smartExtract(){
+  const dur=vid.duration;if(!dur)return;
+  const intv=parseInt(document.getElementById('intv').value);
+  const simT=parseInt(document.getElementById('sim').value);
+  const times=[];
+  for(let t=0;t<=dur;t+=intv)times.push(Math.min(t,dur-0.05));
+  showProgress(0);
+  const saved=vid.currentTime;
+  let lastHash=null,added=0,skipped=0;
+  for(let i=0;i<times.length;i++){
+    await seekTo(times[i]);
+    const hash=getFrameHash(),sharp=frameSharpness(),isBest=sharp>18;
+    if(lastHash&&hashDiff(lastHash,hash)<simT){skipped++;showProgress((i+1)/times.length*100);setStatus(`Ignorado — muito similar (${i+1}/${times.length})`);continue}
+    lastHash=hash;
+    const dataUrl=await renderFrame();
+    addFrame(dataUrl,times[i],{best:isBest});
+    added++;showProgress((i+1)/times.length*100);setStatus(`Extraindo ${i+1}/${times.length}...`);
+  }
+  vid.currentTime=saved;hideProgress();
+  setStatus(`✓ ${added} frames adicionados · ${skipped} ignorados por similaridade`,3500);
+}
+
+async function detectScenes(){
+  const dur=vid.duration;if(!dur)return;
+  const times=[];
+  for(let t=0;t<=dur;t+=0.5)times.push(Math.min(t,dur-0.05));
+  showProgress(0);setStatus('Detectando cortes de cena...');
+  const saved=vid.currentTime;
+  let lastHash=null,scenes=[];
+  for(let i=0;i<times.length;i++){
+    await seekTo(times[i]);
+    const hash=getFrameHash(32);
+    if(lastHash&&hashDiff(lastHash,hash)>22)scenes.push(times[i]);
+    lastHash=hash;
+    showProgress((i+1)/times.length*100);
+    if(i%10===0)setStatus(`Analisando ${fmt(times[i])} / ${fmt(dur)}...`);
+  }
+  for(const t of scenes){await seekTo(t);const dataUrl=await renderFrame();addFrame(dataUrl,t,{scene:true})}
+  vid.currentTime=saved;hideProgress();
+  setStatus(`✓ ${scenes.length} cortes de cena detectados`,3000);
+}
+
+function addFrame(dataUrl,time,meta={}){
+  frames.push({id:Date.now()+Math.random(),dataUrl,time,meta,fav:false,name:''});
+  renderGrid();
+}
+
+function renderGrid(){
+  const filtered=getFiltered();
+  document.getElementById('filter-count').textContent=filtered.length+' frame'+(filtered.length!==1?'s':'');
+  grid.innerHTML='';
+  if(!filtered.length){
+    grid.innerHTML='<div class="empty-state"><span>◻</span>Nenhum frame nesta categoria.</div>';
+    updateCount();return;
+  }
+  filtered.forEach(f=>grid.appendChild(makeCard(f)));
+  updateCount();
+}
+
+function getFiltered(){
+  if(currentFilter==='fav')return frames.filter(f=>f.fav);
+  if(currentFilter==='scene')return frames.filter(f=>f.meta&&f.meta.scene);
+  if(currentFilter==='best')return frames.filter(f=>f.meta&&f.meta.best);
+  return frames;
+}
+
+function openInNewTab(dataUrl){
+  const w=window.open('','_blank');
+  if(!w){alert('Permita pop-ups para este site para abrir a imagem.');return}
+  w.document.write('<!DOCTYPE html><html><head><title>Frame — Conduta Filmes</title><style>body{margin:0;background:#0a0a0a;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;max-height:100vh;display:block}</style></head><body><img src="'+dataUrl+'"></body></html>');
+  w.document.close();
+}
+
+function makeCard(f){
+  const div=document.createElement('div');
+  div.className='frame-item';div.draggable=true;div.dataset.id=f.id;
+
+  div.addEventListener('dragstart',e=>{dragSrc=f.id;div.classList.add('dragging');e.dataTransfer.effectAllowed='move'});
+  div.addEventListener('dragend',()=>{div.classList.remove('dragging');document.querySelectorAll('.frame-item').forEach(d=>d.classList.remove('drag-over'))});
+  div.addEventListener('dragover',e=>{e.preventDefault();div.classList.add('drag-over')});
+  div.addEventListener('dragleave',()=>div.classList.remove('drag-over'));
+  div.addEventListener('drop',e=>{
+    e.preventDefault();div.classList.remove('drag-over');
+    if(dragSrc===f.id)return;
+    const si=frames.findIndex(x=>x.id===dragSrc),di=frames.findIndex(x=>x.id===f.id);
+    const[moved]=frames.splice(si,1);frames.splice(di,0,moved);renderGrid();
+  });
+
+  const img=document.createElement('img');img.src=f.dataUrl;img.style.filter=getFilter();
+
+  if(f.meta&&f.meta.scene){const b=document.createElement('div');b.className='badge badge-scene';b.textContent='corte';div.appendChild(b)}
+  if(f.meta&&f.meta.best){const b=document.createElement('div');b.className='badge badge-best';b.style.top=f.meta.scene?'28px':'6px';b.textContent='nítido';div.appendChild(b)}
+
+  const bottom=document.createElement('div');bottom.className='frame-bottom';
+
+  const star=document.createElement('button');
+  star.className='star-btn'+(f.fav?' active':'');
+  star.textContent=f.fav?'⭐':'☆';
+  star.onclick=()=>{f.fav=!f.fav;renderGrid()};
+
+  const inp=document.createElement('input');
+  inp.className='frame-name';inp.value=f.name||fmt(f.time);
+  inp.placeholder='Nome...';inp.oninput=()=>f.name=inp.value;
+
+  const acts=document.createElement('div');acts.className='frame-actions';
+
+  const dlBtn=document.createElement('div');dlBtn.className='icon-btn';dlBtn.innerHTML='↓';dlBtn.title='Abrir em nova aba → botão direito → Salvar';
+  dlBtn.addEventListener('click',e=>{e.stopPropagation();openInNewTab(f.dataUrl)});
+
+  const rmBtn=document.createElement('div');rmBtn.className='icon-btn';rmBtn.innerHTML='✕';rmBtn.title='Remover';
+  rmBtn.addEventListener('click',e=>{e.stopPropagation();frames=frames.filter(x=>x.id!==f.id);renderGrid()});
+
+  acts.append(dlBtn,rmBtn);bottom.append(star,inp);div.append(img,bottom,acts);
+  return div;
+}
+
+function setFilter(f){
+  currentFilter=f;
+  ['all','fav','scene','best'].forEach(k=>document.getElementById('f-'+k).classList.toggle('active',k===f));
+  renderGrid();
+}
+
+async function downloadZip(subset,name){
+  if(!subset.length){setStatus('Nenhum frame para exportar.',2000);return}
+  setStatus('Gerando ZIP...');
+  const zip=new JSZip();
+  subset.forEach((f,i)=>{
+    const label=(f.name||fmt(f.time)).replace(/[^a-z0-9]/gi,'_');
+    zip.file(String(i+1).padStart(3,'0')+'_'+label+'.jpg',f.dataUrl.split(',')[1],{base64:true});
+  });
+  const blob=await zip.generateAsync({type:'blob'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setStatus('✓ ZIP pronto.',2500);
+}
+
+function downloadAll(){downloadZip(frames,'conduta_frames_todos.zip')}
+function downloadFavs(){downloadZip(frames.filter(f=>f.fav),'conduta_frames_favoritos.zip')}
+function clearAll(){if(!frames.length)return;if(confirm('Remover todos os '+frames.length+' frames?')){frames=[];renderGrid()}}
+
+function updateCount(){
+  document.getElementById('fcount').textContent=frames.length;
+  document.getElementById('favcount').textContent=frames.filter(f=>f.fav).length;
+}
+
+function showProgress(pct){document.getElementById('progress-wrap').style.display='block';document.getElementById('progress-bar').style.width=pct+'%'}
+function hideProgress(){document.getElementById('progress-wrap').style.display='none'}
+function setStatus(msg,clear){
+  const sb=document.getElementById('status-bar');sb.style.display='block';sb.textContent=msg;
+  if(clear)setTimeout(()=>sb.style.display='none',clear);
+}
+</script>
+</body>
+</html>
